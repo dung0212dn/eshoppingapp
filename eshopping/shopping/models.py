@@ -13,7 +13,7 @@ from ckeditor.fields import RichTextField
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add = True)
     updated_date = models.DateTimeField(auto_now = True)
-    description = RichTextField(null = True)
+    description = RichTextField(null = True, blank = True)
     active = models.BooleanField(default = True)
 
     class Meta:
@@ -22,7 +22,7 @@ class BaseModel(models.Model):
 
 class User(AbstractUser):
     avatar = models.ImageField(upload_to = "avatar/%Y/%m")
-
+    user_permissions = None
 
 
 class Category(BaseModel):
@@ -85,7 +85,6 @@ class Business(User):
     )
 
     business_name = models.CharField(max_length = 255, null = False)
-    category = models.ForeignKey('category', on_delete = models.SET_NULL, null = True)
     address = models.CharField(max_length = 255, null = False)
     phone = models.CharField(max_length = 10, null = False)
     tax_code = models.CharField(max_length = 255, null = False)
@@ -100,10 +99,16 @@ class Business(User):
 class Order(BaseModel):
     STATUS_CHOICES = (
         ('created', 'Created'),
+        ('confirm', 'Confirm'),
         ('paid', 'Paid'),
         ('shipped', 'Shipped'),
         ('delivered', 'Delivered'),
         ('cancelled', 'Cancelled'),
+    )
+
+    SHIPPING_CHOICES = (
+        ('normal_delivery', 'Giao hàng tiết kiệm'),
+        ('fast_delivery', 'Giao hàng nhanh')
     )
 
     name = models.CharField(max_length = 255, null = False)
@@ -112,6 +117,8 @@ class Order(BaseModel):
     address = models.CharField(max_length = 255, null = False)
     total_amount = models.IntegerField(validators = [MinValueValidator(0)], null = False)
     status = models.CharField(max_length = 20, choices = STATUS_CHOICES, default = 'created')
+    status_ship = models.CharField(max_length = 20, choices = SHIPPING_CHOICES, default = 'normal_delivery')
+    user = models.ForeignKey(User, related_name = "user", on_delete = models.PROTECT, default = None)
 
     def __str__(self):
         return "Đơn hàng số " + str(self.id)
@@ -123,12 +130,11 @@ class OrderDetail(BaseModel):
     order = models.ForeignKey(Order, on_delete = models.SET_NULL, null = True, related_name = "order_detail")
     price = models.IntegerField(validators = [MinValueValidator(0)], null = False)
     discount = models.IntegerField(validators = [MinValueValidator(0), MaxValueValidator(100)])
-    sizes = models.ForeignKey('size', blank = True, related_name = "order_details", on_delete = models.CASCADE, default = 1)
-    colors = models.ForeignKey("color", blank = True, related_name = "order_details", on_delete = models.CASCADE, default = 1)
+    sizes = models.ForeignKey('size', blank = True, related_name = "order_details", on_delete = models.CASCADE,
+                              default = 1)
+    colors = models.ForeignKey("color", blank = True, related_name = "order_details", on_delete = models.CASCADE,
+                               default = 1)
     quantity = models.IntegerField(validators = [MinValueValidator(0)], null = False)
-
-    class Meta:
-        unique_together = ('product', 'order')
 
 
 # Thanh toán: Số tiền thanh toán, phương thức thanh toán, trạng thái thanh toán, đơn hàng(fk)
@@ -147,7 +153,7 @@ class Payment(BaseModel):
         IS_SUCCESS = "SUCCESS", _("Payment Success")
 
     user = models.ForeignKey(User, related_name = "users", on_delete = models.PROTECT)
-    order = models.ManyToManyField(Order, related_name = "orders")
+    order = models.ForeignKey(Order, related_name = "orders", on_delete = models.PROTECT, null = True)
     payment_method = models.CharField(max_length = 255, choices = PaymentMethod.choices, default = PaymentMethod.COD)
     payment_status = models.CharField(max_length = 255, choices = PaymentStatus.choices,
                                       default = PaymentStatus.IS_FAIL)
@@ -195,12 +201,11 @@ class Cart(models.Model):
 class CartDetail(models.Model):
     product = models.ForeignKey(Product, on_delete = models.CASCADE, null = True, related_name = "cart_detail")
     cart = models.ForeignKey(Cart, on_delete = models.CASCADE, null = True, related_name = "cart_detail")
-    sizes = models.ForeignKey('size', blank = True, related_name = "cart_details", on_delete = models.CASCADE, default = 1)
-    colors = models.ForeignKey("color", blank = True, related_name = "cart_details", on_delete = models.CASCADE, default = 1)
+    sizes = models.ForeignKey('size', blank = True, related_name = "cart_details", on_delete = models.CASCADE,
+                              default = 1)
+    colors = models.ForeignKey("color", blank = True, related_name = "cart_details", on_delete = models.CASCADE,
+                               default = 1)
     quantity = models.IntegerField(validators = [MinValueValidator(0)], null = False, default = 0)
 
     def __str__(self):
         return self.product.name
-
-    class Meta:
-        unique_together = ('product', 'cart')

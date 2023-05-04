@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'oauth2_provider',
     'drf_yasg',
+    'corsheaders',
 
 ]
 
@@ -50,6 +51,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     ),
+    # 'DEFAULT_PARSER_CLASSES': (
+    #     'rest_framework.parsers.FormParser',
+    #     'rest_framework.parsers.MultiPartParser'
+    # )
 
     # 'DEFAULT_PERMISSION_CLASSES': (
     #     'rest_framework.permissions.IsAdminUser'
@@ -59,12 +64,15 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
 ]
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'eshopping.urls'
 
@@ -72,12 +80,12 @@ MEDIA_ROOT = '%s/shopping/static/' % BASE_DIR
 
 CKEDITOR_UPLOAD_PATH = "description/"
 
-CLOUDINARY_URL="cloudinary://173354934936459:iY94KUgroGalgDu8tQPDa2VPITM@shopping-app"
+CLOUDINARY_URL = "cloudinary://173354934936459:iY94KUgroGalgDu8tQPDa2VPITM@shopping-app"
 
 cloudinary.config(
-  cloud_name = "shopping-app",
-  api_key = "173354934936459",
-  api_secret = "iY94KUgroGalgDu8tQPDa2VPITM"
+    cloud_name = "shopping-app",
+    api_key = "173354934936459",
+    api_secret = "iY94KUgroGalgDu8tQPDa2VPITM"
 )
 
 TEMPLATES = [
@@ -154,6 +162,6 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'HUVQn2oIwhHf9JrfZ3LOjV6mKLC4NKFzitWgM0FH'
+CLIENT_ID = '8pEOP0A7AWphcHf3R9UwYTBTsY6SysEWLE9rGSza'
 
-CLIENT_SECRET = '4bDik28GdigzVfsy7HxZXlxH22bLZA9MNWuDELpotPk1oOnoEdT4jUwMB6zvW92JbWBM4vwCM3QM5D9xakH3XCkn6XHOR7ElK3WMOFKoZuQLqDtQlNfvrhvUQiuSAgCT'
+CLIENT_SECRET = '40pDM88HP0rPTFZfrFiIPi0E   WScJL5uOSK0zp6KPzUXB6q2fm2vCWYdS7HYXoP0AcpH4C8bdpxaokCj49Kq88OQMbL65ENf1IXJvmAOCVUyjyr8NGy3m3abWJGbHIqbN'

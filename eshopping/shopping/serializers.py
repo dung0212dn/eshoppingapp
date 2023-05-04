@@ -1,3 +1,5 @@
+import cloudinary
+from django.db.models import Sum, Avg
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 from .models import (Category, Product, Payment, User, Color, Size, Shop, Business,
@@ -18,16 +20,22 @@ from django.contrib.auth.models import Group
 class UserSerializer(ModelSerializer):
     image = serializers.SerializerMethodField(source = 'avatar')
 
+    # def get_image(self, user):
+    #     if user.avatar:
+    #         request = self.context.get('request')
+    #         return request.build_absolute_uri('/static/%s' % user.avatar.name) if request else ''
+
     def get_image(self, user):
         if user.avatar:
             request = self.context.get('request')
-            return request.build_absolute_uri('/static/%s' % user.avatar.name) if request else ''
+            response = cloudinary.uploader.upload(user.avatar)
+            return response['url']
 
     def create(self, validated_data):
         data = validated_data.copy()
         group = Group.objects.get(name = 'User')
         data.pop('groups', None)
-        user_permission = data.pop('user_permission', None)
+        data.update({'is_active': True})
         u = User(**data)
         u.set_password(u.password)
         u.save()
@@ -46,16 +54,21 @@ class UserSerializer(ModelSerializer):
 class BusinessSerializer(ModelSerializer):
     image = serializers.SerializerMethodField(source = 'avatar')
 
-    def get_image(self, business):
-        if business.avatar:
+    # def get_image(self, business):
+    #     if business.avatar:
+    #         request = self.context.get('request')
+    #         return request.build_absolute_uri('/static/%s' % business.avatar.name) if request else ''
+    def get_image(self, user):
+        if user.avatar:
             request = self.context.get('request')
-            return request.build_absolute_uri('/static/%s' % business.avatar.name) if request else ''
+            response = cloudinary.uploader.upload(user.avatar)
+            return response['url']
 
     def create(self, validated_data):
         data = validated_data.copy()
         group = Group.objects.get(name = 'Business')
         data.pop('groups', None)
-        user_permission = data.pop('user_permission', None)
+        data.update({'is_active': True})
         u = Business(**data)
         u.set_password(u.password)
         u.save()
@@ -90,7 +103,8 @@ class SizeSerializer(ModelSerializer):
 
 
 class ShopSerializer(ModelSerializer):
-    # business = serializers.PrimaryKeyRelatedField(queryset = Business.objects.filter(is_active = True, status = 'confirmed'))
+    business = serializers.PrimaryKeyRelatedField(
+        queryset = Business.objects.filter(is_active = True, status = 'confirmed'))
 
     class Meta:
         model = Shop
@@ -103,9 +117,20 @@ class ShopSerializer(ModelSerializer):
 class ProductSerializer(ModelSerializer):
     # image = serializers.SerializerMethodField(source = 'thumbnail')
     thumbnail = serializers.ImageField(use_url = False)
-    colors = ColorSerializer(many = True)
-    sizes = SizeSerializer(many = True)
-    category = serializers.PrimaryKeyRelatedField(queryset = Category.objects.filter(active = True))
+    colors = ColorSerializer(many = True, required = False)
+    sizes = SizeSerializer(many = True, required = False)
+    category = CategorySerializer(required = False)
+    rating = serializers.SerializerMethodField()
+    total_liked = serializers.SerializerMethodField()
+    shop = ShopSerializer(required = False)
+
+    def get_rating(self, obj):
+        product_rating = ProductReview.objects.filter(product = obj).aggregate(Avg('rating'))['rating__avg']
+        return product_rating
+
+    def get_total_liked(self, obj):
+        total_like = Like.objects.filter(product_id = obj, active = True).count()
+        return total_like
 
     # def get_image(self, product):
     #     if product.thumbnail:
@@ -115,7 +140,7 @@ class ProductSerializer(ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'quantity', 'price', 'discount', "thumbnail", "shop", "description", "colors", "sizes",
-                  "category"]
+                  "category", 'rating', 'total_liked']
 
 
 class ProductReviewSerializer(ModelSerializer):
@@ -161,13 +186,29 @@ class GroupSerializer(ModelSerializer):
 
 
 class OrderDetailSerializer(ModelSerializer):
+    sizes = serializers.PrimaryKeyRelatedField(queryset = Size.objects.all())
+    colors = serializers.PrimaryKeyRelatedField(queryset = Color.objects.all())
+    product = serializers.PrimaryKeyRelatedField(queryset = Product.objects.filter(active = True))
+
+    class Meta:
+        model = OrderDetail
+        fields = "__all__"
+
+
+class OrderDetailDeserializer(ModelSerializer):
+    sizes = SizeSerializer()
+    colors = ColorSerializer()
+    product = ProductSerializer()
+
     class Meta:
         model = OrderDetail
         fields = "__all__"
 
 
 class OrderSerializer(ModelSerializer):
-    order_details = OrderDetailSerializer(many = True)
+    order_details = OrderDetailSerializer(many = True, required = False)
+    payment_method = serializers.CharField(write_only = True)
+    payment_status = serializers.CharField(write_only = True)
 
     class Meta:
         model = Order
@@ -179,6 +220,8 @@ class OrderSerializer(ModelSerializer):
 
 class CartDetailSerializer(ModelSerializer):
     product = ProductSerializer()
+    colors = ColorSerializer()
+    sizes = SizeSerializer()
 
     class Meta:
         model = CartDetail
@@ -191,3 +234,21 @@ class CartSerializer(ModelSerializer):
     class Meta:
         model = Cart
         fields = "__all__"
+
+
+class PaymentSerializer(ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = "__all__"
+
+
+class LikeSerializer(ModelSerializer):
+    class Meta:
+        model = Like
+        fields = "__all__"
+
+
+class StatsSerializer(ModelSerializer):
+    user_count = serializers.IntegerField()
+    total_sales = serializers.DecimalField(max_digits = 10, decimal_places = 2)
+    order_count = serializers.IntegerField()

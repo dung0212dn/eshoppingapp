@@ -1,7 +1,7 @@
 from rest_framework import permissions
 from rest_framework.permissions import BasePermission
 
-from .models import Business, Shop, Product
+from .models import Business, Shop, Product, CartDetail, Cart
 
 
 class ReviewOwner(permissions.IsAuthenticated):
@@ -35,3 +35,4 @@ class IsShopOwner(permissions.IsAuthenticated):
             product = Product.objects.get(pk = product_id)
             return product.shop == shop.id
         return True  # cho phép các request khác (GET, POST, DELETE)
+
