@@ -27,12 +27,12 @@ class IsBusinessOwner(permissions.IsAuthenticated):
 
 class IsShopOwner(permissions.IsAuthenticated):
     def has_permission(self, request, view):
-        if request.method == 'PUT' or request.method == 'DELETE' or request.method == 'PATCH':  # chỉ kiểm tra khi request là PUT
+        if request.method == 'PUT' or request.method == 'DELETE' or request.method == 'PATCH':
             user = request.user
             business = Business.objects.get(id = user.id)
             shop = Shop.objects.get(business = business.id)
             product_id = view.kwargs.get('pk')  # lấy id sản phẩm từ url
             product = Product.objects.get(pk = product_id)
             return product.shop == shop.id
-        return True  # cho phép các request khác (GET, POST, DELETE)
+        return True
 

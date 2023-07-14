@@ -21,8 +21,8 @@ class BaseModel(models.Model):
 
 
 class User(AbstractUser):
-    avatar = models.ImageField(upload_to = "avatar/%Y/%m")
-    user_permissions = None
+    avatar = models.ImageField(upload_to = "avatar/")
+
 
 
 class Category(BaseModel):

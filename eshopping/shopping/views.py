@@ -188,16 +188,17 @@ class ProductViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     def list_review(self, request, pk):
         try:
             product = Product.objects.get(id = pk)
-            reviews = ProductReview.objects.filter(active = True, product = product)
+            reviews = ProductReview.objects.filter(active = True, product = product).order_by('-created_date')
             paginator = CommentPagination()
-            list_review = paginator.paginate_queryset(reviews, self.request)
+            list_review = paginator.paginate_queryset(reviews, request)
 
-            return Response(
-                data = ProductReviewSerializer(list_review, many = True, context = {'request': request}).data,
-                status = status.HTTP_200_OK)
+            return paginator.get_paginated_response(
+                ProductReviewSerializer(list_review, many = True, context = {'request': request}).data
+            )
 
         except:
-            return Response(data = {"message": "Đã có lỗi xảy ra"}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            pass
+            # return Response(data = {"message": "Đã có lỗi xảy ra"}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ProductCompareViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -215,7 +216,7 @@ class ProductCompareViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView,
-                  generics.RetrieveAPIView):
+                  generics.RetrieveAPIView, generics.ListAPIView):
     queryset = User.objects.filter(is_active = True)
     serializer_class = UserSerializer
     parser_classes = [parsers.MultiPartParser, ]
@@ -285,7 +286,7 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
     serializer_class = OrderSerializer
 
     def get_permissions(self):
-        if self.action in ['get_order_detail', 'create', 'get_user_order', 'partial_update']:
+        if self.action in ['get_order_detail', 'create', 'get_user_order', 'partial_update', 'get_order_payment']:
             return [permissions.IsAuthenticated()]
 
         return [permissions.AllowAny()]
@@ -308,8 +309,13 @@ class OrderViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIVie
                     status = status.HTTP_200_OK)
             return Response(status = status.HTTP_404_NOT_FOUND)
         except Exception:
-            # return Response(data = {"message": "Có lỗi xảy ra"}, status = status.HTTP_502_BAD_GATEWAY)
-            pass
+            return Response(data = {"message": "Có lỗi xảy ra"}, status = status.HTTP_502_BAD_GATEWAY)
+
+    @action(methods = ['get'], detail = True, url_path = 'get-order-payment')
+    def get_order_payment(self, request, pk):
+        payment = Payment.objects.get(order = pk)
+        return Response(PaymentSerializer(payment, context = {'request': request}).data, status = status.HTTP_200_OK)
+
 
     def create(self, request, *args, **kwargs):
         try:
@@ -483,6 +489,9 @@ class SizesViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = SizeSerializer
 
 
-class PaymentViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView, generics.RetrieveAPIView):
+class PaymentViewSet(viewsets.ViewSet):
     queryset = Payment.objects.all()
     serializer_class = PaymentSerializer
+
+
+

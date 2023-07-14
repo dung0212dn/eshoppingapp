@@ -36,9 +36,9 @@ class UserSerializer(ModelSerializer):
         group = Group.objects.get(name = 'User')
         data.pop('groups', None)
         data.update({'is_active': True})
-        u = User(**data)
-        u.set_password(u.password)
-        u.save()
+        permissions = data.pop('user_permissions', [])
+        u = User.objects.create_user(**data)
+        u.user_permissions.set(permissions)
         u.groups.add(group)
         return u
 
